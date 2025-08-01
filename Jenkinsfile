@@ -1,56 +1,66 @@
 pipeline {
-    agent any
+    agent any // or specify a Docker agent for isolation: agent { docker { image 'python:3.9-slim' } }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'hhttps://github.com/Cyezn/myapp.git' // Replace with your repository URL
             }
         }
 
-        stage('Install System Dependencies') {
-            steps {
-                // Must run as root or a sudo-enabled Jenkins agent
-                sh 'sudo apt-get update && sudo apt-get install -y python3-tk'
-            }
-        }
-
-        stage('Set up Python Env') {
-            steps {
-                sh 'python3 -m venv venv'
-                sh '. venv/bin/activate && pip install --upgrade pip'
-                sh '. venv/bin/activate && pip install -r requirements.txt'
-            }
-        }
-
-        stage('Run Tests') {
+        stage('Setup Environment') {
             steps {
                 script {
-                     def result = sh(script: '. venv/bin/activate && pytest tests/', returnStatus: true)
-                     if (result != 0) {
-                     echo "Tests failed, but continuing..."
-                     }
+                    // Create and activate a virtual environment
+                    sh 'python3 -m venv venv'
+                    sh '. venv/bin/activate'
                 }
             }
         }
 
-        stage('Build App') {
+        stage('Install Dependencies') {
             steps {
-                // Replace with actual build process if needed
-                sh '. venv/bin/activate && python setup.py build'
+                script {
+                    sh '. venv/bin/activate && pip install -r requirements.txt' // Install project dependencies
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    // Example: Run a build script if your project requires one
+                    sh '. venv/bin/activate && python3 setup.py sdist bdist_wheel' // Or your specific build command
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    sh '. venv/bin/activate && pytest' // Example: Run unit tests with pytest
+                }
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'dist/*.whl, dist/*.tar.gz', fingerprint: true // Archive build artifacts
             }
         }
     }
 
     post {
-        success {
-            echo '✅ Build and tests completed successfully.'
+        always {
+            cleanWs() // Clean up the workspace after the build
         }
         failure {
-            echo '❌ Build or tests failed.'
+            echo 'Build failed!'
+            // Add notifications or further actions on failure
         }
-        always {
-            cleanWs()
+        success {
+            echo 'Build successful!'
+            // Add notifications or further actions on success
         }
     }
 }
