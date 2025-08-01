@@ -8,6 +8,13 @@ pipeline {
             }
         }
 
+        stage('Install System Dependencies') {
+            steps {
+                // Must run as root or a sudo-enabled Jenkins agent
+                sh 'sudo apt-get update && sudo apt-get install -y python3-tk'
+            }
+        }
+
         stage('Set up Python Env') {
             steps {
                 sh 'python3 -m venv venv'
@@ -24,7 +31,7 @@ pipeline {
 
         stage('Build App') {
             steps {
-                // Replace this with your actual build logic
+                // Replace with actual build process if needed
                 sh '. venv/bin/activate && python setup.py build'
             }
         }
