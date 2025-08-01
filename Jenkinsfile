@@ -1,66 +1,49 @@
 pipeline {
-    agent any // or specify a Docker agent for isolation: agent { docker { image 'python:3.9-slim' } }
+    agent any
+
+    environment {
+        VENV = 'venv'
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'hhttps://github.com/Cyezn/myapp.git' // Replace with your repository URL
+                checkout scm
             }
         }
 
-        stage('Setup Environment') {
+        stage('Set up Python') {
             steps {
-                script {
-                    // Create and activate a virtual environment
-                    sh 'python3 -m venv venv'
-                    sh '. venv/bin/activate'
-                }
+                sh '''
+                    sudo apt-get update
+                    sudo apt-get install -y python3-tk
+                    python3 -m venv ${VENV}
+                    . ${VENV}/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                '''
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Run Tests') {
             steps {
-                script {
-                    sh '. venv/bin/activate && pip install -r requirements.txt' // Install project dependencies
-                }
+                sh '. ${VENV}/bin/activate && pytest tests/'
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                script {
-                    // Example: Run a build script if your project requires one
-                    sh '. venv/bin/activate && python3 setup.py sdist bdist_wheel' // Or your specific build command
-                }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                script {
-                    sh '. venv/bin/activate && pytest' // Example: Run unit tests with pytest
-                }
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: 'dist/*.whl, dist/*.tar.gz', fingerprint: true // Archive build artifacts
+                sh 'docker build -t inventory-app:latest .'
             }
         }
     }
 
     post {
         always {
-            cleanWs() // Clean up the workspace after the build
+            cleanWs()
         }
         failure {
-            echo 'Build failed!'
-            // Add notifications or further actions on failure
-        }
-        success {
-            echo 'Build successful!'
-            // Add notifications or further actions on success
+            echo '❌ Build or tests failed.'
         }
     }
 }
