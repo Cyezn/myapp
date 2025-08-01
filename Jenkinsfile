@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        python 'Python3' // Make sure this is configured in Jenkins tools
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -28,8 +24,8 @@ pipeline {
 
         stage('Build App') {
             steps {
-                // Replace this with your actual build command
-                sh '. venv/bin/activate && python main.py build'
+                // Replace this with your actual build logic
+                sh '. venv/bin/activate && python setup.py build'
             }
         }
     }
