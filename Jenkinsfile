@@ -1,8 +1,10 @@
 pipeline {
     agent any
+
     environment {
-        VENV_DIR = "venv"
+        IMAGE_NAME = 'inventory-gui'
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -10,36 +12,16 @@ pipeline {
             }
         }
 
-        stage('Set up Python') {
+        stage('Test') {
             steps {
-                sh '''
-                    sudo apt-get update
-                    sudo apt-get install -y python3-tk
-                    python3 -m venv ${VENV_DIR}
-                    . ${VENV_DIR}/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                '''
+                sh 'python3 -m unittest discover -s .'
             }
         }
 
-        stage('Run Tests') {
+        stage('Build Docker Image') {
             steps {
-                sh '''
-                    . ${VENV_DIR}/bin/activate
-                    pytest .
-                '''
+                sh "docker build -t $IMAGE_NAME ."
             }
-        }
-    }
-
-    post {
-        failure {
-            echo '❌ Build or tests failed.'
-            cleanWs()
-        }
-        success {
-            echo '✅ Build and tests passed!'
         }
     }
 }
